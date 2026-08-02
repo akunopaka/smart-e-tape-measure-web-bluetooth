@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#101820">
+    <meta
+      name="description"
+      content="An open-source Web Bluetooth explorer for smart measuring tapes, BLE GATT packets, and hardware protocol research."
+    >
+    <title>Smart Tape Measure Web Bluetooth Explorer</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="shell">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">📡 Open-source BLE interoperability research</p>
+          <h1>Smart Tape Measure <span class="title-end">Explorer 📏</span></h1>
+          <p class="intro">
+            Connect to a Bluetooth smart measuring tape, inspect its GATT
+            notifications, and export the original packets for protocol research.
+            First tested with the RF-BMF01 device advertised as <strong>ES-Tape</strong>.
+          </p>
+          <a
+            class="repo-link"
+            href="https://github.com/akunopaka/smart-e-tape-measure-web-bluetooth"
+            target="_blank"
+            rel="noopener noreferrer"
+          >🐙 View source on GitHub</a>
+        </div>
+        <figure class="device-figure">
+          <a
+            href="https://github.com/akunopaka/smart-e-tape-measure-web-bluetooth"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Open the canonical GitHub repository"
+          >
+            <img
+              src="docs/device-photo.jpg"
+              alt="White RENPHO RF-BMF01 Bluetooth smart tape measure used for protocol testing"
+            >
+          </a>
+          <figcaption>
+            Tested hardware: RENPHO RF-BMF01 (<code>ES-Tape</code>).
+          </figcaption>
+        </figure>
+      </header>
+
+      <section class="readings" aria-label="Current measurement">
+        <article>
+          <p class="label">📐 Measurement</p>
+          <p class="measurement">
+            <span id="measurement-value">--</span>
+            <span class="unit">mm</span>
+          </p>
+          <p id="measurement-cm">-- cm</p>
+        </article>
+        <article>
+          <p class="label">🧭 State / unit</p>
+          <p class="packet-meta" id="packet-meta">-- / --</p>
+          <p id="packet-validity">Waiting for a packet</p>
+          <ul class="state-guide" aria-label="Observed packet codes">
+            <li><strong>P</strong> live or provisional value</li>
+            <li><strong>S</strong> confirmation after the tape button</li>
+            <li><strong>M</strong> metric unit code</li>
+          </ul>
+        </article>
+      </section>
+
+      <section class="packet-card" aria-labelledby="packet-title">
+        <h2 id="packet-title">📦 Latest packet</h2>
+        <dl>
+          <div>
+            <dt>ASCII</dt>
+            <dd><code id="raw-ascii">-</code></dd>
+          </div>
+          <div>
+            <dt>HEX</dt>
+            <dd><code id="raw-hex">-</code></dd>
+          </div>
+        </dl>
+      </section>
+
+      <section class="status-card" aria-labelledby="connection-title">
+        <div>
+          <p class="label" id="connection-title">🔗 Connection</p>
+          <p class="status" id="connection-status" data-state="idle">
+            Not connected
+          </p>
+          <p class="device" id="device-name">No device selected</p>
+          <p class="connection-meta" id="connection-meta">
+            Automatic reconnect starts after a tape is selected
+          </p>
+        </div>
+        <span class="status-dot" aria-hidden="true"></span>
+      </section>
+
+      <section class="actions" aria-label="Connection controls">
+        <button class="primary" id="connect-button" type="button">
+          🔍 Select and connect tape
+        </button>
+        <button id="reselect-button" type="button" disabled>
+          🔄 Select another device
+        </button>
+        <button id="disconnect-button" type="button" disabled>
+          ⏏ Disconnect
+        </button>
+      </section>
+
+      <p class="hint" id="browser-message" role="status"></p>
+
+      <section class="capture-card" aria-labelledby="capture-title">
+        <div class="section-heading">
+          <div>
+            <h2 id="capture-title">💾 Local packet capture</h2>
+            <p id="capture-status">Preparing IndexedDB...</p>
+          </div>
+          <span class="recording-dot" id="recording-dot" aria-hidden="true"></span>
+        </div>
+        <p class="capture-stats" id="capture-stats">
+          Packets in this session: 0
+        </p>
+        <div class="capture-actions">
+          <button id="add-marker-button" type="button" disabled>
+            📍 Add action marker
+          </button>
+          <button id="new-session-button" type="button" disabled>
+            ✨ New session
+          </button>
+          <button id="export-json-button" type="button" disabled>
+            ⬇ Export JSON
+          </button>
+          <button id="export-csv-button" type="button" disabled>
+            ⬇ Export CSV
+          </button>
+          <button class="danger" id="clear-captures-button" type="button" disabled>
+            🗑 Delete captures
+          </button>
+        </div>
+        <p class="capture-note">
+          Each notification is stored before interpretation with its bytes, HEX,
+          Base64, ASCII, timestamp, timing, and parser result. Exports may contain
+          browser and device metadata; review them before sharing.
+        </p>
+      </section>
+
+      <section class="transfer-card" aria-labelledby="transfer-title">
+        <div class="section-heading">
+          <div>
+            <h2 id="transfer-title">✅ Confirmed transfers</h2>
+            <p>One row per confirmation burst from the tape's physical button.</p>
+          </div>
+          <span class="transfer-count" id="transfer-count">0</span>
+        </div>
+        <ol id="transfer-log" aria-live="polite"></ol>
+      </section>
+
+      <section class="log-card" aria-labelledby="log-title">
+        <div class="section-heading">
+          <div>
+            <h2 id="log-title">🧪 Diagnostic log</h2>
+            <p id="log-status">Live</p>
+          </div>
+          <div class="log-actions">
+            <button class="quiet" id="pause-log-button" type="button" aria-pressed="false">
+              ⏸ Pause
+            </button>
+            <button class="quiet" id="clear-log-button" type="button">
+              🧹 Clear
+            </button>
+          </div>
+        </div>
+        <ol id="diagnostic-log" aria-live="polite"></ol>
+      </section>
+
+      <footer>
+        <p>
+          💡 Wake or slightly extend the tape immediately before opening the
+          device chooser. Operating-system Bluetooth pairing is not required.
+        </p>
+        <p>
+          🐙 Canonical repository:
+          <a href="https://github.com/akunopaka/smart-e-tape-measure-web-bluetooth">
+            akunopaka/smart-e-tape-measure-web-bluetooth
+          </a>
+        </p>
+      </footer>
+    </main>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>

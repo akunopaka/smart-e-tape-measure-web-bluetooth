@@ -1,0 +1,8 @@
+.DS_Store
+Thumbs.db
+*.log
+node_modules/
+output/
+.playwright-cli/
+smart-tape-measure-captures-*.json
+smart-tape-measure-captures-*.csv
